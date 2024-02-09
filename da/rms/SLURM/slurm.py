@@ -495,13 +495,17 @@ class SlurmInfo:
       if key in ['Comment','Reason','Command','WorkDir','StdErr','StdIn','StdOut','TRES']: 
         self.add_value(key,value,self._raw[current_unit])
         continue
-      # Now the pairs are separated by space
-      for pair in line.split(' '):
-        key, value = pair.split('=',1)
-        if key in ['Dist']: #'JobName'
-          self._raw[current_unit][key] = line.split(f'{key}=',1)[1]
-          break
-        self.add_value(key,value,self._raw[current_unit])
+      if line.count('=') > 1:
+        # Now the pairs are separated by space
+        for pair in line.split(' '):
+          key, value = pair.split('=',1)
+          if key in ['Dist']: #'JobName'
+            self._raw[current_unit][key] = line.split(f'{key}=',1)[1]
+            break
+          self.add_value(key,value,self._raw[current_unit])
+      else:
+        key, value = line.split('=', 1)
+        self.add_value(key, value, self._raw[current_unit])
     return
 
   def apply_pattern(self,exclude="",include=""):
