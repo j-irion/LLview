@@ -878,7 +878,7 @@ class SlurmInfo:
             ].restart_count
             self._raw[pod_name]["queuedate"] = pod.metadata.creation_timestamp
             self._raw[pod_name]["starttime"] = pod.status.start_time
-            self._raw[pod_name]["endtime"] = pod.container_statuses[
+            self._raw[pod_name]["endtime"] = pod.status.container_statuses[
                 -1
             ].state.terminated.finishedAt
             self._raw[pod_name]["nodelist"] = pod.spec.node_name
