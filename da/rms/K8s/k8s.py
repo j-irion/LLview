@@ -880,7 +880,7 @@ class SlurmInfo:
             self._raw[pod_name]["starttime"] = pod.status.start_time
             self._raw[pod_name]["endtime"] = pod.status.container_statuses[
                 -1
-            ].state.terminated.finishedAt
+            ].state.terminated.finished_at
             self._raw[pod_name]["nodelist"] = pod.spec.node_name
             self._raw[pod_name]["command"] = " ".join(pod.spec.containers[0].command)
 
