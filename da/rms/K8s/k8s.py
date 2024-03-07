@@ -870,15 +870,15 @@ class SlurmInfo:
             self._raw[pod_name]["name"] = pod_name
             self._raw[pod_name]["userprio"] = pod.spec.priority
             self._raw[pod_name]["account"] = pod.metadata.namespace
-            self._raw[pod_name]["qos"] = pod.status.qosClass
+            self._raw[pod_name]["qos"] = pod.status.qos_class
             self._raw[pod_name]["state"] = pod.status.conditions[-1].type
             self._raw[pod_name]["reason"] = pod.status.conditions[-1].reason
-            self._raw[pod_name]["restart"] = pod.status.containerStatuses[
+            self._raw[pod_name]["restart"] = pod.status.container_statuses[
                 -1
-            ].restartCount
-            self._raw[pod_name]["queuedate"] = pod.metadata.creationTimestamp
+            ].restart_count
+            self._raw[pod_name]["queuedate"] = pod.metadata.creation_timestamp
             self._raw[pod_name]["starttime"] = pod.status.start_time
-            self._raw[pod_name]["endtime"] = pod.containerStatuses[
+            self._raw[pod_name]["endtime"] = pod.container_statuses[
                 -1
             ].state.terminated.finishedAt
             self._raw[pod_name]["nodelist"] = pod.spec.node_name
