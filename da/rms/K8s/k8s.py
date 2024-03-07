@@ -775,7 +775,7 @@ class SlurmInfo:
         Gets information about nodes from Kubernetes API
         """
         config.load_kube_config()
-        v1 = client.CoreV1Api
+        v1 = client.CoreV1Api()
         nodes = v1.list_node()
         for node in nodes.items:
             current_unit = node.metadata.name
