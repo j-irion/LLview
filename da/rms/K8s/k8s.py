@@ -846,6 +846,9 @@ class SlurmInfo:
         return float(val)
 
     def get_job_info(self):
+        """
+        Gets information about jobs from Kubernetes API
+        """
         config.load_kube_config()
         v1 = client.CoreV1Api()
         pods = v1.list_pod_for_all_namespaces()
