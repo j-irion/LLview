@@ -884,7 +884,11 @@ class SlurmInfo:
                 else "Unknown"
             )
             self._raw[pod_name]["nodelist"] = pod.spec.node_name
-            self._raw[pod_name]["command"] = " ".join(pod.spec.containers[0].command)
+            self._raw[pod_name]["command"] = (
+                " ".join(pod.spec.containers[0].command)
+                if pod.spec.containers[0].command
+                else "no commands given"
+            )
 
 
 def log_continue(log, message):
