@@ -878,9 +878,11 @@ class SlurmInfo:
             ].restart_count
             self._raw[pod_name]["queuedate"] = pod.metadata.creation_timestamp
             self._raw[pod_name]["starttime"] = pod.status.start_time
-            self._raw[pod_name]["endtime"] = pod.status.container_statuses[
-                -1
-            ].state.terminated.finished_at
+            self._raw[pod_name]["endtime"] = (
+                pod.status.container_statuses[-1].state.terminated.finished_at
+                if pod.status.container_statuses[-1].state.terminated
+                else "Unknown"
+            )
             self._raw[pod_name]["nodelist"] = pod.spec.node_name
             self._raw[pod_name]["command"] = " ".join(pod.spec.containers[0].command)
 
