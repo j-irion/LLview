@@ -156,9 +156,6 @@ classesinfo:
 
 stepinfo: # One entry per step
   methods: []
-  timestamp:
-    file: "./jobs_step_last_timestamp.dat"
-    ts_delay: 30
   LML: "./jobs_step_LML.xml"
   type: "step"
   prefix: "s"

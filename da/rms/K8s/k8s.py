@@ -517,42 +517,11 @@ class SlurmInfo:
         """
         return not bool(self._dict)
 
-    def parse(self, methods, timestamp="", prefix="", stype=""):
+    def parse(self, methods, prefix="", stype=""):
         """
         This function parses the output of Slurm commands
         and returns them in a dictionary
         """
-        # If a timestamp file is given, the query should be made in a given period
-        # This is set by the flags '-S <start_time> -E <end_time>' and the file
-        # 'timestampfile' stores the last timestamp for which information was obtained
-        if timestamp and ("file" in timestamp):
-            end_ts = (
-                time.time() - timestamp["ts_delay"] if "ts_delay" in timestamp else 0
-            )
-
-            if os.path.isfile(timestamp["file"]):
-                try:
-                    with open(timestamp["file"], "r") as f:
-                        last_ts = float(f.readline())
-                except ValueError:
-                    self.log.error(
-                        f"Error reading timestamp from {timestamp['file']}! Check if file is correct or delete it.\n"
-                    )
-                    return
-                self.log.debug(f"Last timestamp from {timestamp['file']}: {last_ts}\n")
-            else:
-                last_ts = end_ts - 1 * 24 * 60 * 60
-                self.log.debug(
-                    f"Timestamp file {timestamp['file']} does not exist. Getting information from the last day...\n"
-                )
-            last_date = datetime.fromtimestamp(last_ts).strftime("%m/%d/%y-%H:%M:%S")
-            end_date = datetime.fromtimestamp(end_ts).strftime("%m/%d/%y-%H:%M:%S")
-            self.log.debug(f"Getting information from {last_date} to {end_date}\n")
-            cmd += f" -S {last_date} -E {end_date}"
-
-            # Write timestamp of last query to file
-            with open(timestamp["file"], "w") as f:
-                f.write(f"{end_ts}")
 
         # get and run methods
         for method_name in methods:
@@ -1140,7 +1109,6 @@ def main():
         else:
             slurm_info.parse(
                 options["methods"],
-                timestamp=options["timestamp"] if "timestamp" in options else "",
                 prefix=options["prefix"] if "prefix" in options else "i",
                 stype=options["type"] if "type" in options else "item",
             )
