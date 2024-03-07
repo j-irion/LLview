@@ -523,6 +523,7 @@ class SlurmInfo:
         and returns them in a dictionary
         """
 
+        self.log.debug(f"Methods to be parsed: {methods}\n")
         # get and run methods
         for method_name in methods:
             method = getattr(self, method_name, None)
