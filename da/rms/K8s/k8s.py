@@ -445,6 +445,18 @@ def stepinfo(options: dict, steps_info) -> dict:
     return stepsextra
 
 
+def parse_resource_value(val):
+    if val.endswith("m"):
+        return float(val[:-1]) / 1000  # Convert millicores to cores
+    elif val.endswith("Mi"):
+        return float(val[:-2])  # Memory in Mi
+    elif val.endswith("Gi"):
+        return float(val[:-2]) * 1024  # Convert Gi to Mi
+    elif val.endswith("Ki"):
+        return float(val[:-2]) / 1024  # Convert Ki to Mi
+    return float(val)
+
+
 class SlurmInfo:
     """
     Class that stores and processes information from Slurm output
@@ -806,12 +818,12 @@ class SlurmInfo:
                         if container.resources and container.resources.requests
                         else {}
                     )
-                    requests_per_node[node_name]["cpu"] += self.__parse_resource_value(
+                    requests_per_node[node_name]["cpu"] += parse_resource_value(
                         resources.get("cpu", "0")
                     )
-                    requests_per_node[node_name][
-                        "memory"
-                    ] += self.__parse_resource_value(resources.get("memory", "0Mi"))
+                    requests_per_node[node_name]["memory"] += parse_resource_value(
+                        resources.get("memory", "0Mi")
+                    )
 
         # Add the aggregated requests per node to dict
         for node_name, resources in requests_per_node.items():
@@ -833,17 +845,6 @@ class SlurmInfo:
             self._raw[node["metadata"]["name"]]["freemem"] = self._raw[
                 node["metadata"]["name"]
             ]["allocmem"] - node["usage"].get("memory")
-
-    def __parse_resource_value(val):
-        if val.endswith("m"):
-            return float(val[:-1]) / 1000  # Convert millicores to cores
-        elif val.endswith("Mi"):
-            return float(val[:-2])  # Memory in Mi
-        elif val.endswith("Gi"):
-            return float(val[:-2]) * 1024  # Convert Gi to Mi
-        elif val.endswith("Ki"):
-            return float(val[:-2]) / 1024  # Convert Ki to Mi
-        return float(val)
 
     def get_job_info(self):
         """
