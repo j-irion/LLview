@@ -496,7 +496,9 @@ class SlurmInfo:
         for method_name in methods:
             method = getattr(self, method_name, None)
             if method:
-                method(prefix, stype)
+                if method_name in ["get_node_info"]:
+                    method(prefix, stype)
+                method()
             else:
                 self.log.error(
                     f"Error executing method! Method '{method_name}' not found."
