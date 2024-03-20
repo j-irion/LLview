@@ -311,8 +311,8 @@ def nodeinfo(options: dict, nodes_info) -> dict:
 
     # Gathering information about the partitions
     partitions = SlurmInfo()
-    partitions.parse("scontrol show part --detail --all")
-    # partitions.to_LML('./partitions_LML.xml','part')
+    # partitions.parse("scontrol show part --detail --all")
+    partitions.to_LML("./partitions_LML.xml", "part")
 
     # Adding information about the different classes/partitions in each node
     nodes_info_dict = nodes_info._dict
@@ -348,38 +348,6 @@ def nodeinfo(options: dict, nodes_info) -> dict:
                     ] += f"[{partname}:{partition['TotalCPUs'] / partition['TotalNodes']}]"
             # else:
             #   log.debug(f"Unknown node {node} in partition {partname}!\n")
-
-    # Adding Used Memory information
-    systemname = ""
-    for nodename, nodeinfo in nodes_info.items():
-        if (re.match("^\d+$", nodeinfo["RealMemory"])) and (
-            re.match("^\d+$", nodeinfo["FreeMem"])
-        ):
-            # Getting reserved memory:
-            if "mem_reserved" in options:
-                if isinstance(options["mem_reserved"], float) or isinstance(
-                    options["mem_reserved"], int
-                ):
-                    memreserved = options["mem_reserved"]
-                elif isinstance(options["mem_reserved"], dict):
-                    if not systemname:
-                        systemname = get_system_name(options)
-                    memreserved = (
-                        options["mem_reserved"][systemname]
-                        if systemname in options["mem_reserved"]
-                        else 0
-                    )
-            else:
-                memreserved = 0
-            UsedMem = (
-                float(nodeinfo["RealMemory"])
-                - float(nodeinfo["FreeMem"])
-                - (memreserved)
-            )
-            if (UsedMem) < 0:
-                log.warning(f"Negative UsedMem in node {nodename}: {UsedMem}\n")
-                continue
-            nodeinfo["UsedMem"] = UsedMem
 
     return nodeextra
 
@@ -528,7 +496,7 @@ class SlurmInfo:
         for method_name in methods:
             method = getattr(self, method_name, None)
             if method:
-                method()
+                method(prefix, stype)
             else:
                 self.log.error(
                     f"Error executing method! Method '{method_name}' not found."
@@ -688,7 +656,7 @@ class SlurmInfo:
         Create LML output file 'filename' using
         information of self._dict
         """
-        self.log.info(f"Writing LML data to {filename}... ")
+        self.log.info(f"Writing LML data to {filename}... \n")
         # Opening LML file
         with open(filename, "w") as file:
             # Writing initial XML preamble
@@ -762,7 +730,7 @@ class SlurmInfo:
 
         return
 
-    def get_node_info(self):
+    def get_node_info(self, prefix="", stype=""):
         """
         Gets information about nodes from Kubernetes API
         """
@@ -779,6 +747,9 @@ class SlurmInfo:
             self._raw[current_unit]["physmem"] = node.status.capacity["memory"]
             self._raw[current_unit]["state"] = node.status.conditions[-1].type
             self._raw[current_unit]["reason"] = node.status.conditions[-1].reason
+            self._raw[current_unit]["__prefix"] = prefix
+            self._raw[current_unit]["__type"] = stype
+        self._dict |= self._raw
 
     def get_node_alloc(self):
         """
@@ -809,6 +780,8 @@ class SlurmInfo:
         for node_name, resources in requests_per_node.items():
             self._raw[node_name]["allocmem"] = resources["memory"]
 
+        self._dict |= self._raw
+
     def get_node_metrics(self):
         """
         Gets metrics about nodes from Kubernetes Metrics API
@@ -825,6 +798,8 @@ class SlurmInfo:
             self._raw[node["metadata"]["name"]]["freemem"] = self._raw[
                 node["metadata"]["name"]
             ]["allocmem"] - parse_memory_to_bytes(node["usage"].get("memory"))
+
+        self._dict |= self._raw
 
     def get_job_info(self):
         """
@@ -859,6 +834,8 @@ class SlurmInfo:
                 if pod.spec.containers[0].command
                 else "no commands given"
             )
+
+        self._dict |= self._raw
 
 
 def log_continue(log, message):
