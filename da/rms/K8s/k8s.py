@@ -367,19 +367,6 @@ def jobinfo(options: dict, jobs_info) -> dict:
             jobinfo["JobState"] if "JobState" in jobinfo else "",
             jobinfo["Reason"] if "Reason" in jobinfo else "",
         )
-        jobinfo["MinCPUsNode"] = int(int(jobinfo["NumCPUs"]) / int(jobinfo["NumNodes"]))
-        if "totaltasks" not in jobinfo:
-            jobinfo["totaltasks"] = int(
-                int(jobinfo["NumCPUs"]) / int(jobinfo["CPUs/Task"])
-            )
-        if "NodeList" in jobinfo and jobinfo["NodeList"]:
-            jobinfo["NodeList"] = add_CPUs_to_nodelist(
-                jobinfo["NodeList"], jobinfo["MinCPUsNode"]
-            )
-        if "SchedNodeList" in jobinfo and jobinfo["SchedNodeList"]:
-            jobinfo["SchedNodeList"] = add_CPUs_to_nodelist(
-                jobinfo["SchedNodeList"], jobinfo["MinCPUsNode"]
-            )
 
         # jobinfo['totaltasks'] = jobinfo['NumCPUs'] 'totaltasks' $jobs{"$jobid"}{NumCPUs} if (!exists($jobs{"$jobid"}{totaltasks}))
 
