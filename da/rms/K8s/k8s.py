@@ -812,7 +812,7 @@ class SlurmInfo:
                 ].state.terminated.reason
             elif pod.status.container_statuses[-1].state.running:
                 self._raw[pod_name]["state"] = "RUNNING"
-                self._raw[pod_name]["reason"] = "None"
+                self._raw[pod_name]["reason"] = ""
             elif pod.status.container_statuses[-1].state.waiting:
                 self._raw[pod_name]["state"] = "WAITING"
                 self._raw[pod_name]["reason"] = pod.status.container_statuses[
