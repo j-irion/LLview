@@ -419,16 +419,6 @@ def parse_resource_value(val):
     return float(val)
 
 
-def parse_memory_to_bytes(memory_str):
-    """
-    Parses a Kubernetes memory string (e.g., "2048Ki", "2Gi") into bytes.
-    """
-    units = {"Ki": 1024, "Mi": 1024**2, "Gi": 1024**3, "Ti": 1024**4}
-    num = float("".join(filter(str.isdigit, memory_str)))
-    unit = "".join(filter(str.isalpha, memory_str))
-    return int(num * units.get(unit, 1))  # Default to bytes if no unit
-
-
 class SlurmInfo:
     """
     Class that stores and processes information from Slurm output
@@ -793,7 +783,7 @@ class SlurmInfo:
             self._raw[node["metadata"]["name"]]["memU"] = node["usage"].get("memory")
             self._raw[node["metadata"]["name"]]["freemem"] = self._raw[
                 node["metadata"]["name"]
-            ]["allocmem"] - parse_memory_to_bytes(node["usage"].get("memory"))
+            ]["allocmem"] - parse_resource_value(node["usage"].get("memory"))
 
         self._dict |= self._raw
 
