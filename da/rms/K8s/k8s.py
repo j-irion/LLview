@@ -823,7 +823,8 @@ class SlurmInfo:
                 if pod.spec.containers[0].command
                 else "no commands given"
             )
-            self._raw[pod_name]["__type"] = type
+            self._raw[pod_name]["__type"] = stype
+            self._raw[pod_name]["__prefix"] = prefix
 
         self._dict |= self._raw
 
