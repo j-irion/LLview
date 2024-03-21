@@ -401,14 +401,21 @@ def stepinfo(options: dict, steps_info) -> dict:
 
 
 def parse_resource_value(val):
+    """
+    Parses a resource value string and converts it to a numerical value.
+    For CPU resources, the value is in cores (where 'm' indicates millicores).
+    For memory resources, the value is converted to bytes.
+    """
     if val.endswith("m"):
-        return float(val[:-1]) / 1000  # Convert millicores to cores
+        # Convert millicores to cores (no direct relation to bytes)
+        return float(val[:-1]) / 1000
     elif val.endswith("Mi"):
-        return float(val[:-2])  # Memory in Mi
+        return float(val[:-2]) * (2**20)  # Convert Mebibytes to bytes
     elif val.endswith("Gi"):
-        return float(val[:-2]) * 1024  # Convert Gi to Mi
+        return float(val[:-2]) * (2**30)  # Convert Gibibytes to bytes
     elif val.endswith("Ki"):
-        return float(val[:-2]) / 1024  # Convert Ki to Mi
+        return float(val[:-2]) * (2**10)  # Convert Kibibytes to bytes
+    # If no unit is specified or unrecognized unit, attempt to treat as raw number (bytes for memory, cores for CPU)
     return float(val)
 
 
