@@ -148,7 +148,7 @@ def get_state(job_state: str, reason: str) -> tuple[str, str]:
     # elif job_state == "FAILED" or job_state == "NODE_FAIL" or job_state == "TIMEOUT":
     #     status = "COMPLETED"
     #     detailed_status = "FAILED"
-    return status, detailed_status
+    return job_state, reason
 
 
 def modify_date(date: str) -> str:
