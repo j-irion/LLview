@@ -805,7 +805,12 @@ class SlurmInfo:
             self._raw[pod_name]["userprio"] = pod.spec.priority
             self._raw[pod_name]["account"] = pod.metadata.namespace
             self._raw[pod_name]["qos"] = pod.status.qos_class
-            self._raw[pod_name]["state"] = pod.status.conditions[-1].type
+            if pod.status.container_statuses[-1].state.terminated:
+                self._raw[pod_name]["state"] = "TERMINATED"
+            elif pod.status.container_statuses[-1].state.running:
+                self._raw[pod_name]["state"] = "RUNNING"
+            elif pod.status.container_statuses[-1].state.waiting:
+                self._raw[pod_name]["state"] = "WAITING"
             self._raw[pod_name]["reason"] = pod.status.conditions[-1].reason
             self._raw[pod_name]["restart"] = pod.status.container_statuses[
                 -1
