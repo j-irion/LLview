@@ -730,7 +730,9 @@ class SlurmInfo:
             self._raw[current_unit]["id"] = current_unit
             self._raw[current_unit]["ncores"] = node.status.capacity["cpu"]
             self._raw[current_unit]["features"] = node.metadata.labels
-            self._raw[current_unit]["physmem"] = node.status.capacity["memory"]
+            self._raw[current_unit]["physmem"] = parse_resource_value(
+                node.status.capacity["memory"]
+            )
             self._raw[current_unit]["state"] = node.status.conditions[-1].type
             self._raw[current_unit]["reason"] = node.status.conditions[-1].reason
             self._raw[current_unit]["__prefix"] = prefix
