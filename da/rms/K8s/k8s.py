@@ -818,7 +818,6 @@ class SlurmInfo:
                 self._raw[pod_name]["reason"] = pod.status.container_statuses[
                     -1
                 ].state.waiting.reason
-            self._raw[pod_name]["reason"] = pod.status.conditions[-1].reason
             self._raw[pod_name]["restart"] = pod.status.container_statuses[
                 -1
             ].restart_count
