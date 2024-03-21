@@ -483,7 +483,7 @@ class SlurmInfo:
         for method_name in methods:
             method = getattr(self, method_name, None)
             if method:
-                if method_name in ["get_node_info"]:
+                if method_name in ["get_node_info", "get_job_info"]:
                     method(prefix, stype)
                 method()
             else:
@@ -790,7 +790,7 @@ class SlurmInfo:
 
         self._dict |= self._raw
 
-    def get_job_info(self):
+    def get_job_info(self, prefix="", stype=""):
         """
         Gets information about jobs from Kubernetes API
         """
@@ -823,6 +823,7 @@ class SlurmInfo:
                 if pod.spec.containers[0].command
                 else "no commands given"
             )
+            self._raw[pod_name]["__type"] = type
 
         self._dict |= self._raw
 
