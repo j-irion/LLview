@@ -127,28 +127,28 @@ def get_state(job_state: str, reason: str) -> tuple[str, str]:
     """
     Define the jobstate
     """
-    status = "UNDETERMINED"
-    detailed_status = "QUEUED_ACTIVE"
-    if job_state == "PENDING" or job_state == "SUSPENDED":
-        status = "SUBMITTED"
-        if reason == "JobHeldUser":
-            detailed_status = "USER_ON_HOLD"
-        elif reason == "JobHeldAdmin":
-            detailed_status = "SYSTEM_ON_HOLD"
-    elif status == "CONFIGURING":
-        status = "SUBMITTED"
-    elif job_state == "RUNNING":
-        status = "RUNNING"
-    elif job_state == "COMPLETED" or job_state == "COMPLETING":
-        status = "COMPLETED"
-        detailed_status = "JOB_OUTERR_READY"
-    elif job_state == "CANCELLED":
-        status = "COMPLETED"
-        detailed_status = "CANCELLED"
-    elif job_state == "FAILED" or job_state == "NODE_FAIL" or job_state == "TIMEOUT":
-        status = "COMPLETED"
-        detailed_status = "FAILED"
-    return status, detailed_status
+    # status = "UNDETERMINED"
+    # detailed_status = "QUEUED_ACTIVE"
+    # if job_state == "PENDING" or job_state == "SUSPENDED":
+    #     status = "SUBMITTED"
+    #     if reason == "JobHeldUser":
+    #         detailed_status = "USER_ON_HOLD"
+    #     elif reason == "JobHeldAdmin":
+    #         detailed_status = "SYSTEM_ON_HOLD"
+    # elif status == "CONFIGURING":
+    #     status = "SUBMITTED"
+    # elif job_state == "RUNNING":
+    #     status = "RUNNING"
+    # elif job_state == "COMPLETED" or job_state == "COMPLETING":
+    #     status = "COMPLETED"
+    #     detailed_status = "JOB_OUTERR_READY"
+    # elif job_state == "CANCELLED":
+    #     status = "COMPLETED"
+    #     detailed_status = "CANCELLED"
+    # elif job_state == "FAILED" or job_state == "NODE_FAIL" or job_state == "TIMEOUT":
+    #     status = "COMPLETED"
+    #     detailed_status = "FAILED"
+    # return status, detailed_status
 
 
 def modify_date(date: str) -> str:
