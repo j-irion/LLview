@@ -787,7 +787,7 @@ class SlurmInfo:
             )
             self._raw[node["metadata"]["name"]]["freemem"] = self._raw[
                 node["metadata"]["name"]
-            ]["allocmem"] - parse_resource_value(node["usage"].get("memory"))
+            ]["physmem"] - parse_resource_value(node["usage"].get("memory"))
 
         self._dict |= self._raw
 
