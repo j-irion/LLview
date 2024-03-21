@@ -780,7 +780,9 @@ class SlurmInfo:
         for node in node_metrics.get("items", []):
             print(f"Parsing metrics of node: {node['metadata']['name']}")
             self._raw[node["metadata"]["name"]]["load"] = node["usage"].get("cpu")
-            self._raw[node["metadata"]["name"]]["memU"] = node["usage"].get("memory")
+            self._raw[node["metadata"]["name"]]["memU"] = parse_resource_value(
+                node["usage"].get("memory")
+            )
             self._raw[node["metadata"]["name"]]["freemem"] = self._raw[
                 node["metadata"]["name"]
             ]["allocmem"] - parse_resource_value(node["usage"].get("memory"))
