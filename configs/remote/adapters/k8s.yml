@@ -25,19 +25,6 @@ nodeinfo:
   modify_before_mapping:
     State: modify_state
     CPULoad: modify_load
-  mapping:
-    NodeName: "id"
-    CPUTot: "ncores"
-    CPULoad: "load"
-    ActiveFeatures: "features"
-    RealMemory: "physmem"
-    State: "state"
-    Reason: "reason"
-    AllocMem: "allocmem"
-    FreeMem: "freemem"
-    UsedMem: "memU"
-    gpus: "gpus"
-    classes: "classes"
 
 jobinfo:
   methods: ["get_job_info"]
@@ -61,40 +48,6 @@ jobinfo:
     EndTime: modify_date
   modify_before_mapping:
     JobState: modify_state
-  mapping:
-    JobId: "step"
-    JobName: "name"
-    UserId: "owner"
-    GroupId: "group"
-    Priority: "userprio"
-    Account: "account"
-    QOS: "qos"
-    JobState: "state"
-    Reason: "reason"
-    Dependency: "dependency"
-    Restarts: "restart"
-    RunTime: "runtime"
-    TimeLimit: "wall"
-    SubmitTime: "queuedate"
-    StartTime: "starttime"
-    EndTime: "endtime"
-    Partition: "queue"
-    status: "status"
-    detailedstatus: "detailedstatus"
-    NodeList: "nodelist"
-    NumNodes: "numnodes"
-    NumCPUs: "totalcores"
-    CPUs/Task: "tpt"
-    Command: "command"
-    gpulist: "gpulist"
-    Comment: "comment"
-    ArrayJobId: "ArrayJobId"
-    ArrayTaskId: "ArrayTaskId"
-    SchedNodeList: "prenodelist"
-    Reservation: "reservation"
-    HetJobId: "HetJobId"
-    HetJobIdSet: "HetJobIdSet"
-    HetJobOffset: "HetJobOffset"
 
     totaltasks: "totaltasks" #? only for DOSTEPS
 
