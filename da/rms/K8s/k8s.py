@@ -716,7 +716,7 @@ class SlurmInfo:
 
         return
 
-    def get_node_info(self, prefix="", stype=""):
+    def get_node_info(self, prefix="nd", stype="node"):
         """
         Gets information about nodes from Kubernetes API
         """
@@ -791,7 +791,7 @@ class SlurmInfo:
 
         self._dict |= self._raw
 
-    def get_job_info(self, prefix="", stype=""):
+    def get_job_info(self, prefix="j", stype="job"):
         """
         Gets information about jobs from Kubernetes API
         """
