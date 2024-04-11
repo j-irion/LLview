@@ -25,6 +25,21 @@ from subprocess import check_output
 from kubernetes import client, config
 
 
+def get_node_list(nodename: str):
+    """
+    Returns nodelist in the correct format for the node (includes the num of CPUs)
+    """
+    config.load_kube_config()
+    v1 = client.CoreV1Api()
+    nodes = v1.list_node()
+    ncpus = 0
+    for node in nodes.items:
+        if node.metadata.name == nodename:
+            ncpus = node.status.capacity["cpu"]
+            break
+    return f"({nodename},{ncpus})"
+
+
 def expand_NodeList(nodelist: str) -> str:
     """
     Split node list by commas only between groups of nodes, not within groups
@@ -123,32 +138,26 @@ def to_hours(time: str) -> int:
     return ret
 
 
-def get_state(job_state: str, reason: str) -> tuple[str, str]:
+def get_state(job_state: str, reason: str) -> tuple[str, str, str]:
     """
     Define the jobstate
     """
-    # status = "UNDETERMINED"
-    # detailed_status = "QUEUED_ACTIVE"
-    # if job_state == "PENDING" or job_state == "SUSPENDED":
-    #     status = "SUBMITTED"
-    #     if reason == "JobHeldUser":
-    #         detailed_status = "USER_ON_HOLD"
-    #     elif reason == "JobHeldAdmin":
-    #         detailed_status = "SYSTEM_ON_HOLD"
-    # elif status == "CONFIGURING":
-    #     status = "SUBMITTED"
-    # elif job_state == "RUNNING":
-    #     status = "RUNNING"
-    # elif job_state == "COMPLETED" or job_state == "COMPLETING":
-    #     status = "COMPLETED"
-    #     detailed_status = "JOB_OUTERR_READY"
-    # elif job_state == "CANCELLED":
-    #     status = "COMPLETED"
-    #     detailed_status = "CANCELLED"
-    # elif job_state == "FAILED" or job_state == "NODE_FAIL" or job_state == "TIMEOUT":
-    #     status = "COMPLETED"
-    #     detailed_status = "FAILED"
-    return job_state, reason
+    status = "UNDETERMINED"
+    detailed_status = "QUEUED_ACTIVE"
+    state = job_state
+    if job_state == "Pending" or job_state == "SUSPENDED":
+        status = "SUBMITTED"
+        detailed_status = "SYSTEM_ON_HOLD"
+    elif job_state == "Running":
+        status = "RUNNING"
+    elif job_state == "Succeeded":
+        status = "COMPLETED"
+        detailed_status = "JOB_OUTERR_READY"
+        state = "Completed"
+    elif job_state == "Failed":
+        status = "COMPLETED"
+        detailed_status = "FAILED"
+    return status, detailed_status, state
 
 
 def modify_date(date: str) -> str:
@@ -225,6 +234,35 @@ def modify_state(state: str) -> str:
         ret = "Suspended"
     elif state == "TIMEOUT":
         ret = "Failed"
+
+    return ret
+
+
+def modify_k8s_node_state(state: str) -> str:
+    """
+    Modify the state of a Kubernetes node to a simplified state
+    """
+    # List of Kubernetes states that should be mapped to "Down"
+    down_states = [
+        "NotReady",
+        "MemoryPressure",
+        "DiskPressure",
+        "NetworkUnavailable",
+        "PIDPressure",
+        "Unknown",
+    ]
+
+    # Map Kubernetes state to a simplified state
+    if state == "Ready":
+        ret = "Running"
+    elif state in down_states:
+        ret = "Down"
+    elif state == "SchedulingDisabled":
+        ret = "Drained"
+    elif state == "Maintenance":
+        ret = "Maint"
+    else:
+        ret = "Idle"  # Default case if state doesn't match any of the above
 
     return ret
 
@@ -363,9 +401,9 @@ def jobinfo(options: dict, jobs_info) -> dict:
     # Updating the jobs dictionary by adding or removing keys
     for jobname, jobinfo in jobs_info.items():
         # Adding status and detailedstatus to jobs
-        jobinfo["status"], jobinfo["detailedstatus"] = get_state(
-            jobinfo["JobState"] if "JobState" in jobinfo else "",
-            jobinfo["Reason"] if "Reason" in jobinfo else "",
+        jobinfo["status"], jobinfo["detailedstatus"], jobinfo["state"] = get_state(
+            jobinfo["state"] if "state" in jobinfo else "",
+            jobinfo["reason"] if "reason" in jobinfo else "",
         )
 
         # jobinfo['totaltasks'] = jobinfo['NumCPUs'] 'totaltasks' $jobs{"$jobid"}{NumCPUs} if (!exists($jobs{"$jobid"}{totaltasks}))
@@ -417,6 +455,14 @@ def parse_resource_value(val):
         return float(val[:-2]) * (2**10)  # Convert Kibibytes to bytes
     # If no unit is specified or unrecognized unit, attempt to treat as raw number (bytes for memory, cores for CPU)
     return float(val)
+
+
+def convert_datetime_format(date_obj: datetime) -> str:
+    """
+    Convert datetime object to string with format '%Y-%m-%d %H:%M:%S'
+    """
+    new_date_str = date_obj.strftime("%Y-%m-%d %H:%M:%S")
+    return new_date_str
 
 
 class SlurmInfo:
@@ -733,7 +779,9 @@ class SlurmInfo:
             self._raw[current_unit]["physmem"] = parse_resource_value(
                 node.status.capacity["memory"]
             )
-            self._raw[current_unit]["state"] = node.status.conditions[-1].type
+            self._raw[current_unit]["state"] = modify_k8s_node_state(
+                node.status.conditions[-1].type
+            )
             self._raw[current_unit]["reason"] = node.status.conditions[-1].reason
             self._raw[current_unit]["__prefix"] = prefix
             self._raw[current_unit]["__type"] = stype
@@ -803,33 +851,31 @@ class SlurmInfo:
             self.log.debug(f"Parsing units of pod {pod_name}...\n")
             self._raw[pod_name] = {}
             self._raw[pod_name]["name"] = pod_name
+            self._raw[pod_name]["step"] = pod_name
             self._raw[pod_name]["userprio"] = pod.spec.priority
             self._raw[pod_name]["account"] = pod.metadata.namespace
             self._raw[pod_name]["qos"] = pod.status.qos_class
-            if pod.status.container_statuses[-1].state.terminated:
-                self._raw[pod_name]["state"] = "TERMINATED"
-                self._raw[pod_name]["reason"] = pod.status.container_statuses[
-                    -1
-                ].state.terminated.reason
-            elif pod.status.container_statuses[-1].state.running:
-                self._raw[pod_name]["state"] = "RUNNING"
-                self._raw[pod_name]["reason"] = ""
-            elif pod.status.container_statuses[-1].state.waiting:
-                self._raw[pod_name]["state"] = "WAITING"
-                self._raw[pod_name]["reason"] = pod.status.container_statuses[
-                    -1
-                ].state.waiting.reason
+            self._raw[pod_name]["state"] = pod.status.phase
+            self._raw[pod_name]["reason"] = (
+                pod.status.reason if pod.status.reason else "None"
+            )
             self._raw[pod_name]["restart"] = pod.status.container_statuses[
                 -1
             ].restart_count
-            self._raw[pod_name]["queuedate"] = pod.metadata.creation_timestamp
-            self._raw[pod_name]["starttime"] = pod.status.start_time
+            self._raw[pod_name]["queuedate"] = convert_datetime_format(
+                pod.metadata.creation_timestamp
+            )
+            self._raw[pod_name]["starttime"] = convert_datetime_format(
+                pod.status.start_time
+            )
             self._raw[pod_name]["endtime"] = (
-                pod.status.container_statuses[-1].state.terminated.finished_at
+                convert_datetime_format(
+                    pod.status.container_statuses[-1].state.terminated.finished_at
+                )
                 if pod.status.container_statuses[-1].state.terminated
                 else "Unknown"
             )
-            self._raw[pod_name]["nodelist"] = pod.spec.node_name
+            self._raw[pod_name]["nodelist"] = get_node_list(pod.spec.node_name)
             self._raw[pod_name]["command"] = (
                 " ".join(pod.spec.containers[0].command)
                 if pod.spec.containers[0].command
