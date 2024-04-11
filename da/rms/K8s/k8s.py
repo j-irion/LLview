@@ -442,19 +442,19 @@ def parse_resource_value(val):
     """
     Parses a resource value string and converts it to a numerical value.
     For CPU resources, the value is in cores (where 'm' indicates millicores).
-    For memory resources, the value is converted to bytes.
+    For memory resources, the value is converted to megabytes.
     """
     if val.endswith("m"):
-        # Convert millicores to cores (no direct relation to bytes)
+        # Convert millicores to cores
         return float(val[:-1]) / 1000
     elif val.endswith("Mi"):
-        return float(val[:-2]) * (2**20)  # Convert Mebibytes to bytes
+        return float(val[:-2])  # Mebibytes directly convert to megabytes in binary
     elif val.endswith("Gi"):
-        return float(val[:-2]) * (2**30)  # Convert Gibibytes to bytes
+        return float(val[:-2]) * (2**10)  # Convert Gibibytes to megabytes
     elif val.endswith("Ki"):
-        return float(val[:-2]) * (2**10)  # Convert Kibibytes to bytes
-    # If no unit is specified or unrecognized unit, attempt to treat as raw number (bytes for memory, cores for CPU)
-    return float(val)
+        return float(val[:-2]) / (2**10)  # Convert Kibibytes to megabytes
+    # If no unit is specified or unrecognized unit, attempt to treat as raw number (assuming bytes for memory, convert to megabytes)
+    return float(val) / (2**20)
 
 
 def convert_datetime_format(date_obj: datetime) -> str:
@@ -829,7 +829,9 @@ class SlurmInfo:
         )
         for node in node_metrics.get("items", []):
             print(f"Parsing metrics of node: {node['metadata']['name']}")
-            self._raw[node["metadata"]["name"]]["load"] = node["usage"].get("cpu")
+            self._raw[node["metadata"]["name"]]["load"] = (
+                int(node["usage"].get("cpu")[:-1]) / 1e9
+            ) / self._raw[node["metadata"]["name"]]["ncores"]
             self._raw[node["metadata"]["name"]]["memU"] = parse_resource_value(
                 node["usage"].get("memory")
             )
@@ -868,13 +870,10 @@ class SlurmInfo:
             self._raw[pod_name]["starttime"] = convert_datetime_format(
                 pod.status.start_time
             )
-            self._raw[pod_name]["endtime"] = (
-                convert_datetime_format(
+            if pod.status.container_statuses[-1].state.terminated:
+                self._raw[pod_name]["endtime"] = convert_datetime_format(
                     pod.status.container_statuses[-1].state.terminated.finished_at
                 )
-                if pod.status.container_statuses[-1].state.terminated
-                else "Unknown"
-            )
             self._raw[pod_name]["nodelist"] = get_node_list(pod.spec.node_name)
             self._raw[pod_name]["command"] = (
                 " ".join(pod.spec.containers[0].command)
