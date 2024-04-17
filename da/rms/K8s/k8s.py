@@ -194,7 +194,7 @@ def get_lowest_qos_class_for_job(pods):
         elif pod_qos == "Burstable" and lowest_qos != "BestEffort":
             lowest_qos = "Burstable"
 
-    return lowest_qos if pods.items else "No Pods Found"
+    return lowest_qos if pods else "No Pods Found"
 
 
 def get_job_restart_count(pods):
@@ -872,7 +872,7 @@ class SlurmInfo:
             print(f"Parsing metrics of node: {node['metadata']['name']}")
             self._raw[node["metadata"]["name"]]["load"] = (
                 int(node["usage"].get("cpu")[:-1]) / 1e9
-            ) / self._raw[node["metadata"]["name"]]["ncores"]
+            ) / int(self._raw[node["metadata"]["name"]]["ncores"])
             self._raw[node["metadata"]["name"]]["memU"] = parse_resource_value(
                 node["usage"].get("memory")
             )
