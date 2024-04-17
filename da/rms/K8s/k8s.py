@@ -22,22 +22,32 @@ import csv
 import collections
 from copy import deepcopy
 from subprocess import check_output
-from kubernetes import client, config
+from kubernetes import client, config as kconfig
 
 
-def get_node_list(nodename: str):
+def get_node_list(pods):
     """
-    Returns nodelist in the correct format for the node (includes the num of CPUs)
+    Returns a list of nodes the given pods are running on
     """
-    config.load_kube_config()
+    nodes = []
+    for pod in pods:
+        nodes.append(pod.spec.node_name)
+    nodes_no_duplicates = list(dict.fromkeys(nodes))
+    return format_node_list(nodes_no_duplicates)
+
+
+def format_node_list(nodelist: list):
+    """
+    Format a list of nodes to a string
+    """
     v1 = client.CoreV1Api()
     nodes = v1.list_node()
-    ncpus = 0
+    node_list_str = ""
     for node in nodes.items:
-        if node.metadata.name == nodename:
+        if node.metadata.name in nodelist:
             ncpus = node.status.capacity["cpu"]
-            break
-    return f"({nodename},{ncpus})"
+            node_list_str += f"({node.metadata.name},{ncpus})"
+    return node_list_str
 
 
 def expand_NodeList(nodelist: str) -> str:
@@ -158,6 +168,40 @@ def get_state(job_state: str, reason: str) -> tuple[str, str, str]:
         status = "COMPLETED"
         detailed_status = "FAILED"
     return status, detailed_status, state
+
+
+def get_job_status(job) -> str:
+    status = job.status
+
+    if status.succeeded is not None and status.succeeded > 0:
+        return "Succeeded"
+    elif status.failed is not None and status.failed > 0:
+        return "Failed"
+    elif status.active is not None and status.active > 0:
+        return "Running"
+    else:
+        return "Pending"
+
+
+def get_lowest_qos_class_for_job(pods):
+    lowest_qos = (
+        "Guaranteed"  # Start with the highest and find the lowest common denominator
+    )
+    for pod in pods:
+        pod_qos = pod.status.qos_class
+        if pod_qos == "BestEffort":
+            lowest_qos = "BestEffort"
+        elif pod_qos == "Burstable" and lowest_qos != "BestEffort":
+            lowest_qos = "Burstable"
+
+    return lowest_qos if pods.items else "No Pods Found"
+
+
+def get_job_restart_count(pods):
+    restart_count = 0
+    for pod in pods:
+        restart_count += pod.status.container_statuses[0].restart_count
+    return restart_count
 
 
 def modify_date(date: str) -> str:
@@ -766,7 +810,6 @@ class SlurmInfo:
         """
         Gets information about nodes from Kubernetes API
         """
-        config.load_kube_config()
         v1 = client.CoreV1Api()
         nodes = v1.list_node()
         for node in nodes.items:
@@ -791,7 +834,6 @@ class SlurmInfo:
         """
         Gets resources allocated to nodes from Kubernetes API (must be run before get_node_metrics)
         """
-        config.load_kube_config()
         v1 = client.CoreV1Api()
         # Prepare dictionaries to hold the total requests per node
         requests_per_node = collections.defaultdict(lambda: {"cpu": 0, "memory": 0})
@@ -822,7 +864,6 @@ class SlurmInfo:
         """
         Gets metrics about nodes from Kubernetes Metrics API
         """
-        config.load_kube_config()
         api = client.CustomObjectsApi()
         node_metrics = api.list_cluster_custom_object(
             "metrics.k8s.io", "v1beta1", "nodes"
@@ -845,43 +886,45 @@ class SlurmInfo:
         """
         Gets information about jobs from Kubernetes API
         """
-        config.load_kube_config()
-        v1 = client.CoreV1Api()
-        pods = v1.list_pod_for_all_namespaces()
-        for pod in pods.items:
-            pod_name = pod.metadata.name
-            self.log.debug(f"Parsing units of pod {pod_name}...\n")
-            self._raw[pod_name] = {}
-            self._raw[pod_name]["name"] = pod_name
-            self._raw[pod_name]["step"] = pod_name
-            self._raw[pod_name]["userprio"] = pod.spec.priority
-            self._raw[pod_name]["account"] = pod.metadata.namespace
-            self._raw[pod_name]["qos"] = pod.status.qos_class
-            self._raw[pod_name]["state"] = pod.status.phase
-            self._raw[pod_name]["reason"] = (
-                pod.status.reason if pod.status.reason else "None"
+        batch_v1 = client.BatchV1Api()
+        jobs = batch_v1.list_job_for_all_namespaces()
+
+        core_v1 = client.CoreV1Api()
+        all_pods = core_v1.list_pod_for_all_namespaces()
+
+        for job in jobs.items:
+            pods = filter(
+                lambda pod: pod.metadata.owner_references
+                and pod.metadata.owner_references[0].uid == job.metadata.uid,
+                all_pods.items,
             )
-            self._raw[pod_name]["restart"] = pod.status.container_statuses[
-                -1
-            ].restart_count
-            self._raw[pod_name]["queuedate"] = convert_datetime_format(
-                pod.metadata.creation_timestamp
+            job_name = job.metadata.name
+            self.log.debug(f"Parsing units of job {job_name}...\n")
+            self._raw[job_name] = {}
+            self._raw[job_name]["name"] = job_name
+            self._raw[job_name]["step"] = job_name
+            self._raw[job_name]["account"] = job.metadata.namespace
+            self._raw[job_name]["qos"] = get_lowest_qos_class_for_job(pods)
+            self._raw[job_name]["state"] = get_job_status(job)
+            self._raw[job_name]["restart"] = get_job_restart_count(pods)
+            self._raw[job_name]["queuedate"] = convert_datetime_format(
+                job.metadata.creation_timestamp
             )
-            self._raw[pod_name]["starttime"] = convert_datetime_format(
-                pod.status.start_time
+            self._raw[job_name]["starttime"] = convert_datetime_format(
+                job.status.start_time
             )
-            if pod.status.container_statuses[-1].state.terminated:
-                self._raw[pod_name]["endtime"] = convert_datetime_format(
-                    pod.status.container_statuses[-1].state.terminated.finished_at
+            if job.status.completion_time:
+                self._raw[job_name]["endtime"] = convert_datetime_format(
+                    job.status.completion_time
                 )
-            self._raw[pod_name]["nodelist"] = get_node_list(pod.spec.node_name)
-            self._raw[pod_name]["command"] = (
-                " ".join(pod.spec.containers[0].command)
-                if pod.spec.containers[0].command
+            self._raw[job_name]["nodelist"] = get_node_list(pods)
+            self._raw[job_name]["command"] = (
+                " ".join(job.spec.template.spec.containers[0].command)
+                if job.spec.template.spec.containers[0].command
                 else "no commands given"
             )
-            self._raw[pod_name]["__type"] = stype
-            self._raw[pod_name]["__prefix"] = prefix
+            self._raw[job_name]["__type"] = stype
+            self._raw[job_name]["__prefix"] = prefix
 
         self._dict |= self._raw
 
@@ -1112,6 +1155,9 @@ def main():
 
     if args.singleLML:
         unique = SlurmInfo()
+
+    # load kubeconfig
+    kconfig.load_kube_config()
 
     #####################################################################################
     # Processing config file
