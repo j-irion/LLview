@@ -158,13 +158,13 @@ def get_state(job_state: str, reason: str) -> tuple[str, str, str]:
     if job_state == "Pending" or job_state == "SUSPENDED":
         status = "SUBMITTED"
         detailed_status = "SYSTEM_ON_HOLD"
-    elif job_state == "Running":
+    if job_state == "Running":
         status = "RUNNING"
-    elif job_state == "Succeeded":
+    if job_state == "Succeeded":
         status = "COMPLETED"
         detailed_status = "JOB_OUTERR_READY"
         state = "Completed"
-    elif job_state == "Failed":
+    if job_state == "Failed":
         status = "COMPLETED"
         detailed_status = "FAILED"
     return status, detailed_status, state
@@ -172,15 +172,14 @@ def get_state(job_state: str, reason: str) -> tuple[str, str, str]:
 
 def get_job_status(job) -> str:
     status = job.status
-
+    new_status = "Pending"
     if status.succeeded is not None and status.succeeded > 0:
-        return "Succeeded"
-    elif status.failed is not None and status.failed > 0:
-        return "Failed"
-    elif status.active is not None and status.active > 0:
-        return "Running"
-    else:
-        return "Pending"
+        new_status = "Succeeded"
+    if status.failed is not None and status.failed > 0:
+        new_status = "Failed"
+    if status.active is not None and status.active > 0:
+        new_status = "Running"
+    return new_status
 
 
 def get_lowest_qos_class_for_job(pods):
