@@ -672,12 +672,12 @@ class SlurmInfo:
         skip_keys = set()
         for unit, item in self._dict.items():
             new_dict[unit] = {}
-            for key, map in mapping_dict.items():
-                # Checking if key to be modified is in object
-                if key not in item:
-                    skip_keys.add(key)
-                    continue
-                new_dict[unit][map] = item[key]
+            # for key, map in mapping_dict.items():
+            #     # Checking if key to be modified is in object
+            #     if key not in item:
+            #         skip_keys.add(key)
+            #         continue
+            #     new_dict[unit][map] = item[key]
             # Copying also internal keys that are used in the LML
             if "__type" in item:
                 new_dict[unit]["__type"] = item["__type"]
