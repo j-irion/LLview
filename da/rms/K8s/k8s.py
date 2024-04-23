@@ -472,12 +472,12 @@ def stepinfo(options: dict, steps_info) -> dict:
         # Obtaining 'jobid' and 'step' from stepname and adding to steps_info
         match = re.match("^([\d\_\+]+)\.?(.*)$", stepname)
         stepsextra.setdefault(stepname, {})
-        stepsextra[stepname]["jobid"] = match.group(1)
-        stepsextra[stepname]["step"] = match.group(2) if match.group(2) else "job"
+        # stepsextra[stepname]["jobid"] = match.group(1)
+        # stepsextra[stepname]["step"] = match.group(2) if match.group(2) else "job"
         # Obtaining 'rc' and 'signr' from ExitCode and adding to steps_info
-        match = re.match("^(\d*):?(\d*)$", stepinfo["ExitCode"])
-        stepsextra[stepname]["rc"] = match.group(1) if match.group(1) else "-"
-        stepsextra[stepname]["signr"] = match.group(2) if match.group(2) else "-"
+        # match = re.match("^(\d*):?(\d*)$", stepinfo["ExitCode"])
+        # stepsextra[stepname]["rc"] = match.group(1) if match.group(1) else "-"
+        # stepsextra[stepname]["signr"] = match.group(2) if match.group(2) else "-"
     return stepsextra
 
 
@@ -925,6 +925,38 @@ class SlurmInfo:
             )
             self._raw[job_name]["__type"] = stype
             self._raw[job_name]["__prefix"] = prefix
+
+        self._dict |= self._raw
+
+    def get_job_steps(self, prefix="s", stype="step"):
+        """
+        Gets information about job steps from Kubernetes API
+        """
+        v1 = client.CoreV1Api()
+        all_pods = v1.list_pod_for_all_namespaces()
+        pods = [pod for pod in all_pods.items if pod.metadata != "kube-system"]
+        for pod in pods:
+            pod_name = pod.metadata.name
+            self.log.debug(f"Parsing units of pod {pod_name}...\n")
+            self._raw[pod_name] = {}
+            self._raw[pod_name]["jobid"] = pod.metadata.owner_references[0].name
+            self._raw[pod_name]["name"] = pod_name
+            self._raw[pod_name]["step"] = pod_name
+            self._raw[pod_name]["state"] = pod.status.phase
+            self._raw[pod_name]["reason"] = (
+                pod.status.reason if pod.status.reason else "None"
+            )
+            self._raw[pod_name]["starttime"] = convert_datetime_format(
+                pod.status.start_time
+            )
+            if pod.status.container_statuses[-1].state.terminated:
+                self._raw[pod_name]["endtime"] = convert_datetime_format(
+                    pod.status.container_statuses[-1].state.terminated.finished_at
+                )
+            self._raw[pod_name]["nodelist"] = pod.spec.node_name
+            self._raw[pod_name]["nnodes"] = 1
+            self._raw[pod_name]["__type"] = stype
+            self._raw[pod_name]["__prefix"] = prefix
 
         self._dict |= self._raw
 
