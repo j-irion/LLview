@@ -892,11 +892,12 @@ class SlurmInfo:
         all_pods = core_v1.list_pod_for_all_namespaces()
 
         for job in jobs.items:
-            pods = filter(
+            pods_iter = filter(
                 lambda pod: pod.metadata.owner_references
                 and pod.metadata.owner_references[0].uid == job.metadata.uid,
                 all_pods.items,
             )
+            pods = list(pods_iter)
             job_name = job.metadata.name
             self.log.debug(f"Parsing units of job {job_name}...\n")
             self._raw[job_name] = {}
