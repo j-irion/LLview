@@ -33,7 +33,7 @@ def get_node_list(pods):
     for pod in pods:
         nodes.append(pod.spec.node_name)
     nodes_no_duplicates = list(dict.fromkeys(nodes))
-    return format_node_list(nodes_no_duplicates)
+    return format_node_list(nodes_no_duplicates), len(nodes_no_duplicates)
 
 
 def format_node_list(nodelist: list):
@@ -917,7 +917,9 @@ class SlurmInfo:
                 self._raw[job_name]["endtime"] = convert_datetime_format(
                     job.status.completion_time
                 )
-            self._raw[job_name]["nodelist"] = get_node_list(pods)
+            self._raw[job_name]["nodelist"], self._raw[job_name]["numnodes"] = (
+                get_node_list(pods)
+            )
             self._raw[job_name]["command"] = (
                 " ".join(job.spec.template.spec.containers[0].command)
                 if job.spec.template.spec.containers[0].command
