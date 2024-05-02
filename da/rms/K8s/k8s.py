@@ -491,13 +491,14 @@ def parse_resource_value(val):
         # Convert millicores to cores
         return float(val[:-1]) / 1000
     elif val.endswith("Mi"):
-        return float(val[:-2])  # Mebibytes directly convert to megabytes in binary
+        return float(val[:-2])  # Mebibytes directly convert to Megabytes in binary
     elif val.endswith("Gi"):
-        return float(val[:-2]) * (2**10)  # Convert Gibibytes to megabytes
+        return float(val[:-2]) * (2**10)  # Convert Gibibytes to Megabytes
     elif val.endswith("Ki"):
-        return float(val[:-2]) / (2**10)  # Convert Kibibytes to megabytes
-    # If no unit is specified or unrecognized unit, attempt to treat as raw number (assuming bytes for memory, convert to megabytes)
-    return float(val) / (2**20)
+        return float(val[:-2]) / (2**10)  # Convert Kibibytes to Megabytes
+    elif val.endswith("M"):
+        return float(val[:-1])  # Megabytes
+    return float(val)
 
 
 def convert_datetime_format(date_obj: datetime) -> str:
